@@ -1,9 +1,7 @@
 package com.angelini.starbeam;
 
-import com.angelini.starbeam.avro.Example;
-import com.angelini.starbeam.avro.Raw;
-
 import com.google.cloud.dataflow.sdk.Pipeline;
+import com.google.cloud.dataflow.sdk.coders.AvroCoder;
 import com.google.cloud.dataflow.sdk.io.AvroIO;
 import com.google.cloud.dataflow.sdk.options.DirectPipelineOptions;
 import com.google.cloud.dataflow.sdk.options.PipelineOptionsFactory;
@@ -14,33 +12,18 @@ import com.google.cloud.dataflow.sdk.values.TypeDescriptor;
 
 import com.moandjiezana.toml.Toml;
 
+import org.apache.avro.Schema;
+import org.apache.avro.generic.GenericRecord;
+
 import java.io.File;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-class Attribute {
-    String source;
-
-    public String toString() {
-        return "source: " + source;
-    }
-}
-
-class Entity {
-    String name;
-    Map<String, Attribute> attributes;
-
-    public String toString() {
-        String output = "Entity: " + name + "\n";
-        output += attributes.entrySet()
-                .stream()
-                .map(entry -> "  " + entry.getKey() + " -> " + entry.getValue().toString())
-                .collect(Collectors.joining("\n"));
-        return output;
-    }
-}
+import java.io.IOException;
+import java.util.Set;
 
 public class Main {
+    static Schema loadSchema(String name) throws IOException {
+        return new Schema.Parser().parse(new File(name + ".avsc"));
+    }
+
     static Pipeline createLocalPipeline() {
         DirectPipelineOptions options = PipelineOptionsFactory.create()
                 .as(DirectPipelineOptions.class);
@@ -48,27 +31,35 @@ public class Main {
         return Pipeline.create(options);
     }
 
-    public static void main(String[] args) {
-        File example_file = new File("example.toml");
-        Entity example = new Toml().read(example_file).to(Entity.class);
-        System.out.println(example.toString());
+    static PCollection<GenericRecord> buildEntity(Pipeline p, Schema schema, Entity entity) throws IOException {
+        Set<String> tables = entity.getSourceTables();
+        assert tables.size() == 1;
+
+        String table = tables.toArray(new String[1])[0];
+        String schemaStr = schema.toString();
+
+        PCollection<GenericRecord> tableColl = p.apply(AvroIO.Read
+                .from(table + "_sample.avro")
+                .withSchema(loadSchema(table)));
+
+        return tableColl.apply(MapElements
+                .via((GenericRecord source) -> entity.fromSource(schemaStr, source))
+                .withOutputType(new TypeDescriptor<GenericRecord>() {}))
+                .setCoder(AvroCoder.of(GenericRecord.class, schema));
+    }
+
+    public static void main(String[] args) throws IOException {
+        Entity entity = new Toml().read(new File("example.toml")).to(Entity.class);
+        System.out.println(entity.toString());
 
         Pipeline p = createLocalPipeline();
 
-        PCollection<Raw> raw_records = p.apply(AvroIO.Read.from("raw_sample.avro")
-                .withSchema(Raw.class));
+        Schema entitySchema = loadSchema(entity.name);
+        PCollection<GenericRecord> entity_coll = buildEntity(p, entitySchema, entity);
 
-        PCollection<Example> example_records = raw_records.apply(MapElements
-                .via((Raw raw) -> Example.newBuilder()
-                        .setId(Integer.parseInt(raw.getId().toString()))
-                        .setTime(Integer.parseInt(raw.getCreatedAt().toString()))
-                        .setFirst(raw.getFirst())
-                        .setSecond(raw.getSecond())
-                        .build())
-                .withOutputType(new TypeDescriptor<Example>() {}));
-
-        example_records.apply(AvroIO.Write.to("results.avro")
-                .withSchema(Example.class));
+        entity_coll.apply(AvroIO.Write.to("results")
+                .withSchema(entitySchema)
+                .withSuffix(".avro"));
 
         p.run();
     }

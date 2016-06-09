@@ -1,0 +1,13 @@
+name = "example"
+
+[attributes.id]
+source = "raw.id"
+
+[attributes.time]
+source = "raw.time"
+
+[attributes.first]
+source = "raw.first"
+
+[attributes.second]
+source = "raw.second"

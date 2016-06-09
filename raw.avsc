@@ -1,0 +1,11 @@
+{
+    "namespace": "com.angelini.starbeam.avro",
+    "type": "record",
+    "name": "Raw",
+    "fields": [
+        {"name": "id", "type": "string"},
+        {"name": "created_at", "type": "string"},
+        {"name": "first", "type": "string"},
+        {"name": "second", "type": "string"}
+    ]
+}

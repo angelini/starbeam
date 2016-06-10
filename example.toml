@@ -5,25 +5,32 @@ fn = "com.angelini.starbeam.udfs.Base/identity"
 
     [attributes.id.sources.raw_first]
     table = "raw_first"
-    column = "id"
+    columns = ["id"]
 
 [attributes.time]
 fn = "com.angelini.starbeam.udfs.Base/identity"
 
     [attributes.time.sources.raw_first]
     table = "raw_first"
-    column = "created_at"
+    columns = ["created_at"]
 
 [attributes.first]
 fn = "com.angelini.starbeam.udfs.Base/identity"
 
     [attributes.first.sources.raw_first]
     table = "raw_first"
-    column = "value"
+    columns = ["value"]
 
 [attributes.second]
 fn = "com.angelini.starbeam.udfs.Base/stringToInt"
 
     [attributes.second.sources.raw_second]
     table = "raw_second"
-    column = "value"
+    columns = ["value"]
+
+[attributes.combine_columns]
+fn = "com.angelini.starbeam.udfs.Base/combineStrings"
+
+    [attributes.combine_columns.sources.raw_first]
+    table = "raw_first"
+    columns = ["id", "value"]

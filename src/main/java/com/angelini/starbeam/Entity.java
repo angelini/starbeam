@@ -6,18 +6,23 @@ import org.apache.avro.generic.GenericRecordBuilder;
 
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 class Source implements Serializable {
     String table;
-    String column;
+    String[] columns;
 
     public String toString() {
-        return "table: " + table + ", column: " + column;
+        String cols = Arrays.stream(columns)
+                .map(c -> c.toString())
+                .collect(Collectors.joining(","));
+        return "table: " + table + ", columns: [" + cols + "]";
     }
 }
 
@@ -33,7 +38,7 @@ class Attribute implements Serializable {
         return fn.split("/")[1];
     }
 
-    Function<Object, Object> getDynamicFunction() {
+    Function<List<Object>, Object> getDynamicFunction() {
         ClassLoader classLoader = Attribute.class.getClassLoader();
         try {
             Class clazz = classLoader.loadClass(getFnClass());
@@ -78,12 +83,16 @@ class Entity implements Serializable {
 
         for (Map.Entry<String, Attribute> entry : attributes.entrySet()) {
             Attribute attr = entry.getValue();
+            // FIXME: Only using the first source
             Source source = attr.sources.values().stream().findFirst().get();
 
             GenericRecord record = sourcesMap.get(source.table);
-            Function<Object, Object> fn = attr.getDynamicFunction();
+            Function<List<Object>, Object> fn = attr.getDynamicFunction();
 
-            builder.set(entry.getKey(), fn.apply(record.get(source.column)));
+            List<Object> args = Arrays.stream(source.columns)
+                    .map(column -> record.get(column))
+                    .collect(Collectors.toList());
+            builder.set(entry.getKey(), fn.apply(args));
         }
 
         return builder.build();

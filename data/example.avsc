@@ -6,6 +6,7 @@
         {"name": "id", "type": "int"},
         {"name": "time", "type": "int"},
         {"name": "first", "type": "string"},
-        {"name": "second", "type": "int"}
+        {"name": "second", "type": "int"},
+        {"name": "combine_columns", "type": "string"}
     ]
 }

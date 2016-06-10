@@ -1,17 +1,17 @@
 name = "example"
 
 [attributes.id]
-source = "raw.id"
-fn = "string->int"
+source = "raw_first.id"
+fn = "int->int"
 
 [attributes.time]
-source = "raw.created_at"
-fn = "string->int"
+source = "raw_first.created_at"
+fn = "int->int"
 
 [attributes.first]
-source = "raw.first"
+source = "raw_first.value"
 fn = "string->string"
 
 [attributes.second]
-source = "raw.second"
-fn = "string->string"
+source = "raw_second.value"
+fn = "string->int"

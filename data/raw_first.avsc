@@ -1,0 +1,10 @@
+{
+    "namespace": "com.angelini.starbeam.avro",
+    "type": "record",
+    "name": "raw_first",
+    "fields": [
+        {"name": "id", "type": "int"},
+        {"name": "created_at", "type": "int"},
+        {"name": "value", "type": "string"}
+    ]
+}

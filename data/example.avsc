@@ -6,6 +6,6 @@
         {"name": "id", "type": "int"},
         {"name": "time", "type": "int"},
         {"name": "first", "type": "string"},
-        {"name": "second", "type": "string"}
+        {"name": "second", "type": "int"}
     ]
 }

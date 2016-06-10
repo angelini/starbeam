@@ -1,15 +1,15 @@
 package com.angelini.starbeam;
 
-import com.google.cloud.dataflow.sdk.repackaged.com.google.common.base.Function;
-
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
 
 import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 class Attribute implements Serializable {
@@ -24,17 +24,25 @@ class Attribute implements Serializable {
         return source.split("\\.")[1];
     }
 
-    Function<Object, Object> getFunction() {
-        switch (fn) {
-            case "string->int":
-                return str -> Integer.parseInt(str.toString());
-            case "string->string":
-                return str -> str;
-            case "int->int":
-                return i -> i;
-        }
+    String getFnClass() {
+        return fn.split("/")[0];
+    }
 
-        return null;
+    String getFnName() {
+        return fn.split("/")[1];
+    }
+
+    Function<Object, Object> getDynamicFunction() {
+        ClassLoader classLoader = Attribute.class.getClassLoader();
+        try {
+            Class clazz = classLoader.loadClass(getFnClass());
+            return (Function) clazz.getMethod(getFnName()).invoke(null);
+        } catch (ClassNotFoundException |
+                NoSuchMethodException |
+                InvocationTargetException |
+                IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public String toString() {
@@ -67,7 +75,9 @@ class Entity implements Serializable {
             GenericRecord source = sourcesMap.get(attr.getSourceTable());
             String sourceColumn = attr.getSourceColumn();
 
-            builder.set(entry.getKey(), attr.getFunction().apply(source.get(sourceColumn)));
+            Function<Object, Object> fn = attr.getDynamicFunction();
+
+            builder.set(entry.getKey(), fn.apply(source.get(sourceColumn)));
         }
 
         return builder.build();

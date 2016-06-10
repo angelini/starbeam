@@ -2,16 +2,16 @@ name = "example"
 
 [attributes.id]
 source = "raw_first.id"
-fn = "int->int"
+fn = "com.angelini.starbeam.udfs.Base/identity"
 
 [attributes.time]
 source = "raw_first.created_at"
-fn = "int->int"
+fn = "com.angelini.starbeam.udfs.Base/identity"
 
 [attributes.first]
 source = "raw_first.value"
-fn = "string->string"
+fn = "com.angelini.starbeam.udfs.Base/identity"
 
 [attributes.second]
 source = "raw_second.value"
-fn = "string->int"
+fn = "com.angelini.starbeam.udfs.Base/stringToInt"

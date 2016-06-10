@@ -3,34 +3,45 @@ name = "example"
 [attributes.id]
 fn = "com.angelini.starbeam.udfs.Base/identity"
 
-    [attributes.id.sources.raw_first]
+    [[attributes.id.sources]]
     table = "raw_first"
     columns = ["id"]
 
 [attributes.time]
 fn = "com.angelini.starbeam.udfs.Base/identity"
 
-    [attributes.time.sources.raw_first]
+    [[attributes.time.sources]]
     table = "raw_first"
     columns = ["created_at"]
 
 [attributes.first]
 fn = "com.angelini.starbeam.udfs.Base/identity"
 
-    [attributes.first.sources.raw_first]
+    [[attributes.first.sources]]
     table = "raw_first"
     columns = ["value"]
 
 [attributes.second]
 fn = "com.angelini.starbeam.udfs.Base/stringToInt"
 
-    [attributes.second.sources.raw_second]
+    [[attributes.second.sources]]
     table = "raw_second"
     columns = ["value"]
 
 [attributes.combine_columns]
 fn = "com.angelini.starbeam.udfs.Base/combineStrings"
 
-    [attributes.combine_columns.sources.raw_first]
+    [[attributes.combine_columns.sources]]
     table = "raw_first"
     columns = ["id", "value"]
+
+[attributes.combine_tables]
+fn = "com.angelini.starbeam.udfs.Base/combineStrings"
+
+    [[attributes.combine_tables.sources]]
+    table = "raw_first"
+    columns = ["value"]
+
+    [[attributes.combine_tables.sources]]
+    table = "raw_second"
+    columns = ["value"]

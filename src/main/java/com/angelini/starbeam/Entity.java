@@ -1,17 +1,14 @@
 package com.angelini.starbeam;
 
+import com.google.cloud.dataflow.sdk.values.KV;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
 
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 class Source implements Serializable {
@@ -22,13 +19,13 @@ class Source implements Serializable {
         String cols = Arrays.stream(columns)
                 .map(c -> c.toString())
                 .collect(Collectors.joining(","));
-        return "table: " + table + ", columns: [" + cols + "]";
+        return table + ".[" + cols + "]";
     }
 }
 
 class Attribute implements Serializable {
     String fn;
-    Map<String, Source> sources;
+    Source[] sources;
 
     String getFnClass() {
         return fn.split("/")[0];
@@ -52,9 +49,8 @@ class Attribute implements Serializable {
     }
 
     public String toString() {
-        return sources.entrySet()
-                .stream()
-                .map(e -> e.getKey() + ": " + e.getValue())
+        return Arrays.stream(sources)
+                .map(s -> s.toString())
                 .collect(Collectors.joining(" | "));
     }
 }
@@ -63,13 +59,12 @@ class Entity implements Serializable {
     String name;
     Map<String, Attribute> attributes;
 
-    List<String> getSourceTables() {
+    Set<String> getSourceTables() {
         return attributes.values()
                 .stream()
-                .flatMap(attr -> attr.sources.values()
-                        .stream()
+                .flatMap(attr -> Arrays.stream(attr.sources)
                         .map(s -> s.table))
-                .collect(Collectors.toList());
+                .collect(Collectors.toSet());
     }
 
     GenericRecord fromSource(String schemaStr, Iterable<GenericRecord> sources) {
@@ -83,15 +78,14 @@ class Entity implements Serializable {
 
         for (Map.Entry<String, Attribute> entry : attributes.entrySet()) {
             Attribute attr = entry.getValue();
-            // FIXME: Only using the first source
-            Source source = attr.sources.values().stream().findFirst().get();
-
-            GenericRecord record = sourcesMap.get(source.table);
             Function<List<Object>, Object> fn = attr.getDynamicFunction();
 
-            List<Object> args = Arrays.stream(source.columns)
-                    .map(column -> record.get(column))
+            List<Object> args = Arrays.stream(attr.sources)
+                    .map(source -> KV.of(source, sourcesMap.get(source.table)))
+                    .flatMap(kv -> Arrays.stream(kv.getKey().columns)
+                            .map(c -> kv.getValue().get(c)))
                     .collect(Collectors.toList());
+
             builder.set(entry.getKey(), fn.apply(args));
         }
 

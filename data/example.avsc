@@ -7,6 +7,7 @@
         {"name": "time", "type": "int"},
         {"name": "first", "type": "string"},
         {"name": "second", "type": "int"},
-        {"name": "combine_columns", "type": "string"}
+        {"name": "combine_columns", "type": "string"},
+        {"name": "combine_tables", "type": "string"}
     ]
 }

@@ -1,17 +1,29 @@
 name = "example"
 
 [attributes.id]
-source = "raw_first.id"
 fn = "com.angelini.starbeam.udfs.Base/identity"
+
+    [attributes.id.sources.raw_first]
+    table = "raw_first"
+    column = "id"
 
 [attributes.time]
-source = "raw_first.created_at"
 fn = "com.angelini.starbeam.udfs.Base/identity"
+
+    [attributes.time.sources.raw_first]
+    table = "raw_first"
+    column = "created_at"
 
 [attributes.first]
-source = "raw_first.value"
 fn = "com.angelini.starbeam.udfs.Base/identity"
 
+    [attributes.first.sources.raw_first]
+    table = "raw_first"
+    column = "value"
+
 [attributes.second]
-source = "raw_second.value"
 fn = "com.angelini.starbeam.udfs.Base/stringToInt"
+
+    [attributes.second.sources.raw_second]
+    table = "raw_second"
+    column = "value"

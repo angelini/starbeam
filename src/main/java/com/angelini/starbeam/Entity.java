@@ -12,17 +12,18 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+class Source implements Serializable {
+    String table;
+    String column;
+
+    public String toString() {
+        return "table: " + table + ", column: " + column;
+    }
+}
+
 class Attribute implements Serializable {
-    String source;
     String fn;
-
-    String getSourceTable() {
-        return source.split("\\.")[0];
-    }
-
-    String getSourceColumn() {
-        return source.split("\\.")[1];
-    }
+    Map<String, Source> sources;
 
     String getFnClass() {
         return fn.split("/")[0];
@@ -46,7 +47,10 @@ class Attribute implements Serializable {
     }
 
     public String toString() {
-        return "source: " + source;
+        return sources.entrySet()
+                .stream()
+                .map(e -> e.getKey() + ": " + e.getValue())
+                .collect(Collectors.joining(" | "));
     }
 }
 
@@ -57,7 +61,9 @@ class Entity implements Serializable {
     List<String> getSourceTables() {
         return attributes.values()
                 .stream()
-                .map(attr -> attr.getSourceTable())
+                .flatMap(attr -> attr.sources.values()
+                        .stream()
+                        .map(s -> s.table))
                 .collect(Collectors.toList());
     }
 
@@ -72,12 +78,12 @@ class Entity implements Serializable {
 
         for (Map.Entry<String, Attribute> entry : attributes.entrySet()) {
             Attribute attr = entry.getValue();
-            GenericRecord source = sourcesMap.get(attr.getSourceTable());
-            String sourceColumn = attr.getSourceColumn();
+            Source source = attr.sources.values().stream().findFirst().get();
 
+            GenericRecord record = sourcesMap.get(source.table);
             Function<Object, Object> fn = attr.getDynamicFunction();
 
-            builder.set(entry.getKey(), fn.apply(source.get(sourceColumn)));
+            builder.set(entry.getKey(), fn.apply(record.get(source.column)));
         }
 
         return builder.build();

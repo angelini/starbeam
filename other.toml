@@ -1,0 +1,25 @@
+name = "other"
+
+[attributes.id]
+fn = "com.angelini.starbeam.udfs.Base/identity"
+    [[attributes.id.sources]]
+    table = "example"
+    columns = ["id"]
+
+[attributes.time]
+fn = "com.angelini.starbeam.udfs.Base/identity"
+
+    [[attributes.time.sources]]
+    table = "example"
+    columns = ["time"]
+
+[attributes.value]
+fn = "com.angelini.starbeam.udfs.Base/combineStrings"
+
+    [[attributes.value.sources]]
+    table = "example"
+    columns = ["first"]
+
+    [[attributes.value.sources]]
+    table = "raw_second"
+    columns = ["value"]

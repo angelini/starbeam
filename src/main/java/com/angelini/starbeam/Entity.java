@@ -1,6 +1,5 @@
 package com.angelini.starbeam;
 
-import com.google.cloud.dataflow.sdk.values.KV;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.generic.GenericRecordBuilder;
@@ -10,6 +9,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 class Source implements Serializable {
     String table;
@@ -17,7 +18,6 @@ class Source implements Serializable {
 
     public String toString() {
         String cols = Arrays.stream(columns)
-                .map(c -> c.toString())
                 .collect(Collectors.joining(","));
         return table + ".[" + cols + "]";
     }
@@ -50,7 +50,7 @@ class Attribute implements Serializable {
 
     public String toString() {
         return Arrays.stream(sources)
-                .map(s -> s.toString())
+                .map(Source::toString)
                 .collect(Collectors.joining(" | "));
     }
 }
@@ -67,37 +67,40 @@ class Entity implements Serializable {
                 .collect(Collectors.toSet());
     }
 
-    GenericRecord fromSource(String schemaStr, Iterable<GenericRecord> sources) {
+    GenericRecord fromSourceRecords(String schemaStr, Iterable<GenericRecord> sources) {
         Schema schema = new Schema.Parser().parse(schemaStr);
         GenericRecordBuilder builder = new GenericRecordBuilder(schema);
 
-        Map<String, GenericRecord> sourcesMap = new HashMap();
-        for (GenericRecord source : sources) {
-            sourcesMap.put(source.getSchema().getName(), source);
-        }
+        Map<String, GenericRecord> sourcesMap = StreamSupport
+                .stream(sources.spliterator(), false)
+                .collect(Collectors.toMap(s -> s.getSchema().getName(), Function.identity()));
 
-        for (Map.Entry<String, Attribute> entry : attributes.entrySet()) {
-            Attribute attr = entry.getValue();
-            Function<List<Object>, Object> fn = attr.getDynamicFunction();
+        attributes.entrySet().stream()
+                .forEach(entry -> {
+                    Attribute attr = entry.getValue();
+                    Function<List<Object>, Object> fn = attr.getDynamicFunction();
 
-            List<Object> args = Arrays.stream(attr.sources)
-                    .map(source -> KV.of(source, sourcesMap.get(source.table)))
-                    .flatMap(kv -> Arrays.stream(kv.getKey().columns)
-                            .map(c -> kv.getValue().get(c)))
-                    .collect(Collectors.toList());
+                    List<Object> fnArgs = Arrays.stream(attr.sources)
+                            .flatMap(source -> inputValuesFromSource(source, sourcesMap))
+                            .collect(Collectors.toList());
 
-            builder.set(entry.getKey(), fn.apply(args));
-        }
+                    builder.set(entry.getKey(), fn.apply(fnArgs));
+                });
 
         return builder.build();
     }
 
     public String toString() {
         String output = "Entity: " + name + "\n";
-        output += attributes.entrySet()
-                .stream()
+        output += attributes.entrySet().stream()
                 .map(entry -> "  " + entry.getKey() + " -> " + entry.getValue().toString())
                 .collect(Collectors.joining("\n"));
         return output;
+    }
+
+    private static Stream<Object> inputValuesFromSource(Source source, Map<String, GenericRecord> sourceRecords) {
+        GenericRecord record = sourceRecords.get(source.table);
+        return Arrays.stream(source.columns)
+                .map(record::get);
     }
 }

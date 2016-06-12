@@ -1,7 +1,7 @@
 {
     "namespace": "com.angelini.starbeam.avro",
     "type": "record",
-    "name": "Example",
+    "name": "example",
     "fields": [
         {"name": "id", "type": "int"},
         {"name": "time", "type": "int"},

@@ -12,9 +12,47 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+class TableView {
+    enum Aggregate {
+        ALL, UNIQUE, SUM
+    }
+
+    Map<String, Aggregate> aggMap;
+
+    TableView(String[] columns, String[] aggregates) {
+        if (aggregates != null && columns.length != aggregates.length) {
+            throw new AssertionError("Unmatched aggregations");
+        }
+
+        aggMap = new HashMap<>();
+        for (int i = 0; i < columns.length; i++) {
+            if (aggregates != null) {
+                aggMap.put(columns[i], Aggregate.valueOf(aggregates[i]));
+            } else {
+                aggMap.put(columns[i], Aggregate.ALL);
+            }
+        }
+    }
+
+    void merge(TableView other) {
+        other.aggMap.forEach((k, v) ->
+                aggMap.merge(k, v, (v1, v2) -> {
+                    if (v1 != v2) {
+                        throw new RuntimeException("Mixed aggregations for column: " + k);
+                    }
+                    return v1;
+                }));
+    }
+}
+
 class Source implements Serializable {
     String table;
     String[] columns;
+    String[] aggregates;
+
+    public TableView getTableView() {
+        return new TableView(columns, aggregates);
+    }
 
     public String toString() {
         String cols = Arrays.stream(columns)
@@ -59,12 +97,22 @@ class Entity implements Serializable {
     String name;
     Map<String, Attribute> attributes;
 
-    Set<String> getSourceTables() {
-        return attributes.values()
-                .stream()
-                .flatMap(attr -> Arrays.stream(attr.sources)
-                        .map(s -> s.table))
-                .collect(Collectors.toSet());
+    Map<String, TableView> getSourceTables() {
+        Map<String, TableView> aggregates = new HashMap<>();
+
+        for (Attribute attr : attributes.values()) {
+            for (Source source : attr.sources) {
+                if (aggregates.containsKey(source.table)) {
+                    TableView combinedView = aggregates.get(source.table);
+                    TableView sourceView = source.getTableView();
+                    combinedView.merge(sourceView);
+                } else {
+                    aggregates.put(source.table, source.getTableView());
+                }
+            }
+        }
+
+        return aggregates;
     }
 
     GenericRecord fromSourceRecords(String schemaStr, Iterable<GenericRecord> sources) {

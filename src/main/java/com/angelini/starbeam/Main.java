@@ -40,7 +40,7 @@ class DependencyGraph {
                 .forEach(entity -> graph.addVertex(entity));
 
         Arrays.stream(entities)
-                .forEach(entity -> entity.getSourceTables().stream()
+                .forEach(entity -> entity.getSourceTables().keySet().stream()
                             .filter(map::containsKey)
                             .forEach(table -> graph.addEdge(map.get(table), entity)));
     }
@@ -79,7 +79,7 @@ public class Main {
     static PCollection<GenericRecord> buildEntity(
             Pipeline p, Entity entity, Schema schema, SourceLoader loader) {
         List<PCollection<KV<Integer, GenericRecord>>> tables =
-                entity.getSourceTables().stream()
+                entity.getSourceTables().keySet().stream()
                         .map(table -> {
                             Schema tableSchema = loadSchema(table);
                             return loader.loadTable(p, table, tableSchema);

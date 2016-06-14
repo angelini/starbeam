@@ -2,7 +2,6 @@ package com.angelini.starbeam;
 
 import com.google.cloud.dataflow.sdk.Pipeline;
 import com.google.cloud.dataflow.sdk.coders.AvroCoder;
-import com.google.cloud.dataflow.sdk.coders.KvCoder;
 import com.google.cloud.dataflow.sdk.io.AvroIO;
 import com.google.cloud.dataflow.sdk.options.DirectPipelineOptions;
 import com.google.cloud.dataflow.sdk.options.PipelineOptionsFactory;
@@ -77,34 +76,13 @@ public class Main {
         return Pipeline.create(options);
     }
 
-    static PCollection<KV<Integer, GenericRecord>> keyById(PCollection<GenericRecord> collection, Schema schema) {
-        return collection.apply(MapElements
-                .via((GenericRecord record) -> KV.of((Integer) record.get("id"), record))
-                .withOutputType(new TypeDescriptor<KV<Integer, GenericRecord>>() {}))
-                .setCoder(KvCoder.of(
-                        AvroCoder.of(Integer.class),
-                        AvroCoder.of(GenericRecord.class, schema)));
-    }
-
-    static PCollection<GenericRecord> loadTable(Pipeline p, String table, Schema schema) {
-        return p.apply(AvroIO.Read
-                        .from("data/" + table + ".avro")
-                        .withSchema(schema))
-                .setCoder(AvroCoder.of(GenericRecord.class, schema));
-    }
-
     static PCollection<GenericRecord> buildEntity(
-            Pipeline p, Entity entity, Schema schema, Map<String, PCollection<GenericRecord>> buildCache) {
+            Pipeline p, Entity entity, Schema schema, SourceLoader loader) {
         List<PCollection<KV<Integer, GenericRecord>>> tables =
                 entity.getSourceTables().stream()
                         .map(table -> {
                             Schema tableSchema = loadSchema(table);
-
-                            if (buildCache.containsKey(table)) {
-                                return keyById(buildCache.get(table), tableSchema);
-                            } else {
-                                return keyById(loadTable(p, table, tableSchema), tableSchema);
-                            }
+                            return loader.loadTable(p, table, tableSchema);
                         })
                         .collect(Collectors.toList());
 
@@ -125,26 +103,27 @@ public class Main {
                 .withSuffix(".avro"));
     }
 
-    public static void main(String[] args) throws IOException {
-        Entity example = loadEntity("example");
-        Entity other = loadEntity("other");
-
-        Entity[] entities = {example, other};
+    static void buildAndWriteEntities(Pipeline p, Entity[] entities) {
         DependencyGraph graph = new DependencyGraph(entities);
-
-        Map<String, PCollection<GenericRecord>> buildCache = new HashMap<>();
-
-        Pipeline p = createLocalPipeline();
+        SourceLoader loader = new SourceLoader();
 
         graph.getBuildOrder().stream().forEach(entity -> {
             System.out.println(entity);
             Schema schema = loadSchema(entity.name);
 
-            PCollection<GenericRecord> collection = buildEntity(p, entity, schema, buildCache);
-            buildCache.put(entity.name, collection);
+            PCollection<GenericRecord> collection = buildEntity(p, entity, schema, loader);
+            loader.put(entity.name, collection);
             writeEntity(collection, entity.name, schema);
         });
+    }
 
+    public static void main(String[] args) throws IOException {
+        Entity example = loadEntity("example");
+        Entity other = loadEntity("other");
+        Entity[] entities = {example, other};
+
+        Pipeline p = createLocalPipeline();
+        buildAndWriteEntities(p, entities);
         p.run();
     }
 }

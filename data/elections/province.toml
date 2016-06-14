@@ -1,0 +1,25 @@
+name = "province"
+
+[attributes.id]
+fn = "com.angelini.starbeam.udfs.Base/hash"
+
+    [[attributes.id.sources]]
+    table = "elections/results_by_district"
+    columns = ["province"]
+    agg = ["unique"]
+
+[attributes.name]
+fn = "com.angelini.starbeam.udfs.Election/keepEnglishName"
+
+    [[attributes.name.sources]]
+    table = "elections/results_by_district"
+    columns = ["province"]
+    agg = ["unique"]
+
+[attributes.total_votes]
+fn = "com.angelini.starbeam.udfs.Base/sum"
+
+    [[attributes.total_votes.sources]]
+    table = "elections/results_by_district"
+    columns = ["votes_obtained"]
+    agg = ["sum"]

@@ -2,6 +2,7 @@ name = "other"
 
 [attributes.id]
 fn = "com.angelini.starbeam.udfs.Base/identity"
+
     [[attributes.id.sources]]
     table = "example"
     columns = ["id"]

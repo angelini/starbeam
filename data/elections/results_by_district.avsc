@@ -1,0 +1,17 @@
+{
+    "namespace": "com.angelini.starbeam.avro",
+    "type": "record",
+    "name": "results_by_district",
+    "fields": [
+        {"name": "province", "type": "string"},
+        {"name": "electoral_district_name", "type": "string"},
+        {"name": "electoral_district_number", "type": "int"},
+        {"name": "candidate", "type": "string"},
+        {"name": "candidate_residence", "type": "string"},
+        {"name": "candidate_occupation", "type": "string"},
+        {"name": "votes_obtained", "type": "int"},
+        {"name": "percentage_of_votes_obtained", "type": "double"},
+        {"name": "majority", "type": "int"},
+        {"name": "majority_percentage", "type": "double"}
+    ]
+}
